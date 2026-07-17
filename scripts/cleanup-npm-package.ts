@@ -5,6 +5,6 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packageRoot = path.join(repositoryRoot, "apps", "cli");
 
-for (const stagedPath of ["skills", "README.md", "LICENSE"]) {
+for (const stagedPath of ["skills", "agent-config", "README.md", "LICENSE"]) {
   rmSync(path.join(packageRoot, stagedPath), { recursive: true, force: true });
 }

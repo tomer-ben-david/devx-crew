@@ -16,7 +16,7 @@ Usage:
   ./mux.sh typecheck             Run TypeScript verification
   ./mux.sh build                 Build all packages
   ./mux.sh link                  Link the \`mux\` command globally
-  ./mux.sh link-agent-files      Link public skills for Codex, Claude, and shared agents
+  ./mux.sh link-agent-files      Link public skills and global agent files (AGENTS.md/CLAUDE.md/...) for Codex, Claude, and shared agents
   ./mux.sh review [arguments]    Run \`mux review\`
   ./mux.sh multireview [args]    Run concurrent Codex and Grok review
   ./mux.sh clean                 Remove generated build output

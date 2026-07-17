@@ -9,6 +9,7 @@ const outputFile = path.join(packageRoot, "dist", "main.js");
 
 rmSync(path.join(packageRoot, "dist"), { recursive: true, force: true });
 rmSync(path.join(packageRoot, "skills"), { recursive: true, force: true });
+rmSync(path.join(packageRoot, "agent-config"), { recursive: true, force: true });
 mkdirSync(path.dirname(outputFile), { recursive: true });
 
 await build({
@@ -31,5 +32,6 @@ cpSync(path.join(repositoryRoot, "skills"), path.join(packageRoot, "skills"), {
   recursive: true,
   filter: (source) => !source.endsWith(".test.ts"),
 });
+cpSync(path.join(repositoryRoot, "agent-config"), path.join(packageRoot, "agent-config"), { recursive: true });
 cpSync(path.join(repositoryRoot, "README.md"), path.join(packageRoot, "README.md"));
 cpSync(path.join(repositoryRoot, "LICENSE"), path.join(packageRoot, "LICENSE"));

@@ -29,6 +29,7 @@
     "dist/main.js",
     "dist/main.js.map",
     "skills",
+    "agent-config",
     "README.md",
     "LICENSE"
   ],
