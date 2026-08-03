@@ -209,9 +209,15 @@ test("the shared protocol preserves ChatGPT working-chat continuity", () => {
 
 // --- Ported codex-review-cycle features (contractually pinned) ---
 
-test("mux-director ports the @codex bot slow second review channel", () => {
+test("mux-director fires the free + async @codex bot eagerly every push and does NOT block convergence on it", () => {
   assert.match(skill, /gh pr comment <PR> --body "@codex review"/);
   assert.match(skill, /chatgpt-codex-connector/);
+  // Free + async reviewers fire eager, in parallel; convergence blocks on fast only.
+  assert.match(skill, /free \+ async/i);
+  assert.match(skill, /fire both eagerly on every push/i);
+  assert.match(skill, /Convergence blocks on the FAST reviewers only/i);
+  // The old blocking slow-channel rule is gone.
+  assert.doesNotMatch(skill, /do not conclude "clean" until the bot has actually responded/i);
 });
 
 test("mux-director ports P1-bounded convergence for large diffs", () => {
@@ -225,8 +231,14 @@ test("mux-director ports the Discord webhook update mechanic", () => {
   assert.match(skill, /HTTP 204 = success/);
 });
 
-test("mux-director ports Reviewer-C (Claude DevX review every cycle)", () => {
+test("mux-director runs an honestly-labeled DevX self-review every cycle (not an independent reviewer)", () => {
   assert.match(skill, /gh pr diff <PR>/);
   assert.match(skill, /~\/dev\/projects\/devx-coding-standards/);
   assert.match(skill, /readability\/reviewability\/overall-clean/);
+  // It is the director's OWN review, labeled as self-review, never framed as another AI.
+  assert.match(skill, /Director self-review/i);
+  assert.match(skill, /\[DevX self-review\]/);
+  assert.match(skill, /reviewing its own orchestration's diff/i);
+  // The disguise phrase is gone.
+  assert.doesNotMatch(skill, /this is what the other ai said/i);
 });

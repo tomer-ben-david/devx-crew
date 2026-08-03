@@ -1,6 +1,6 @@
 ---
 name: mux-director
-description: Orchestrate an implementor and independent Codex, Grok, or ChatGPT reviewers for a single PR, OR oversee several parallel PRs with cross-PR smell-detection, one status view, and decision routing. Use when the user asks for mux-director, mux-orchestrate, a multi-review loop with an implementor, mux-aware panel discovery, repeated-patch or context-drift detection, codex-review or grok-review coordination, cross-PR oversight, scope-creep/over-engineering/whack-a-mole detection, independent reality checks against an agent's self-serving claims, reviewer-set parity, or older codex-orchestrate, cmux-review-loop, rex-review-loop, or staged review workflows. Use mux-multireview instead for read-only concurrent Codex and Grok review without implementation.
+description: Orchestrate an implementor plus independent Codex/Grok/ChatGPT/@codex reviewers (fired in parallel, every push, no ranking) AND the director's own clearly-labeled DevX self-review for a single PR, OR oversee several parallel PRs with cross-PR smell-detection, one status view, and decision routing. Use when the user asks for mux-director, mux-orchestrate, a multi-review loop with an implementor, mux-aware panel discovery, repeated-patch or context-drift detection, codex-review or grok-review coordination, cross-PR oversight, scope-creep/over-engineering/whack-a-mole detection, independent reality checks against an agent's self-serving claims, reviewer-set parity, or older codex-orchestrate, cmux-review-loop, rex-review-loop, or staged review workflows. Use mux-multireview instead for read-only concurrent Codex and Grok review without implementation.
 ---
 
 # Mux Director
@@ -20,9 +20,12 @@ description: Orchestrate an implementor and independent Codex, Grok, or ChatGPT 
 ```text
 user
   -> mux-director (single-PR mode = orchestrator; multi-PR mode = director)
-     -> implementor       codex / codex-implementor
-     -> reviewers         codex-review + grok-review
-     -> optional browser  ChatGPT
+     -> implementor                       codex / codex-implementor
+     -> reviewers (all fire in PARALLEL, every push, NO ranking):
+          codex-review / grok-review panels   (fast; BLOCK convergence)
+          @codex GitHub bot                   (free + async; fire eager, do NOT block)
+          ChatGPT browser                     (free + async; fire eager, do NOT block)
+     -> self-review (the director itself)  DevX diff read every cycle
 ```
 
 The director reasons with the user, routes work, verifies state, and relays findings. The implementor edits and validates. Reviewers independently inspect the selected scope. Never let a reviewer inherit the implementation discussion.
@@ -155,17 +158,21 @@ Use `mux multireview` when the user wants provider-neutral concurrent Codex and 
 
 For persistent Codex and Grok panels, prefer their JSONL session files over terminal scrollback once the session is matched to the exact target and repository. Use pane reads only for discovery, readiness, and fallback.
 
-### @codex GitHub bot (slow second channel)
+### @codex GitHub bot + ChatGPT browser: free + async, fire eager, never block
 
-`gh pr comment <PR> --body "@codex review"` triggers the `chatgpt-codex-connector` bot - the SLOW channel, which takes several minutes. Do NOT treat its silence as failure or poll it every 2 min. Authorization to publish a finding does not authorize a bot trigger; the policy and authorization gate live in [references/review-protocol.md](references/review-protocol.md). Every cycle, also tell the implementer to check the PR for new review comments itself - `gh api repos/<org>/<repo>/pulls/<N>/comments`, filtered to the new batch - because some reviewers (notably `@codex`, sometimes grok) post findings as inline PR comments. Tag each finding's source: `[codex-reviewer tab]` / `[@codex bot]` / `[grok-review tab]` / `[DevX-standards review]`. Do not conclude "clean" until the bot has actually responded AND is clean.
+`@codex` and ChatGPT browser are **free + async** reviewers. Their latency is free parallelism, not a cost: **fire both eagerly on every push**, in parallel with the fast panels, so their reviews land while the fast reviewers are still running. Do not wait for them before starting the fast reviewers, and do not hold a cycle open for them.
+
+`gh pr comment <PR> --body "@codex review"` triggers the `chatgpt-codex-connector` bot, which takes several minutes. Do NOT treat its silence as failure or poll it every 2 min. Authorization to publish a finding does not authorize a bot trigger; the policy and authorization gate live in [references/review-protocol.md](references/review-protocol.md). Every cycle, also tell the implementer to check the PR for new review comments itself - `gh api repos/<org>/<repo>/pulls/<N>/comments`, filtered to the new batch - because some reviewers (notably `@codex`, sometimes grok) post findings as inline PR comments. Tag each finding's source: `[codex-reviewer tab]` / `[@codex bot]` / `[grok-review tab]` / `[ChatGPT browser]` / `[DevX self-review]`.
+
+**Convergence blocks on the FAST reviewers only** (codex-review + grok-review clean on the same HEAD). A late result from a free-async reviewer does NOT block the current cycle: if it surfaces a P1, reopen the affected repair family and fold the fix into the next cycle. Never silently drop a late finding - it just doesn't gate the cycle it arrived in.
 
 ### P1-bounded convergence (use on large diffs)
 
 Two thorough reviewers on xhigh/high will essentially always find a suggestion-tier nit on a 4000+ line diff, so "loop until literally nothing actionable" can run forever and breeds fix-then-re-find churn. Default to a severity-bounded stop: **loop until every reviewer returns ZERO P1/bug findings on the same HEAD.** Fix scope each round = P1/bugs always fixed; P2/suggestions/nits are triaged case-by-case by the implementer - fix the ones that are real and worth it, push back on / defer (one-line "deferred: <reason>") the ones that aren't important or are over-cautious reviewer noise. P2-and-below do NOT block stopping. This is achievable and keeps the diff from bloating into more findings. Only insist on strict all-clean when the diff is small or the user asks for it. This complements (does not replace) the convergence/loop-detection rules below.
 
-### Reviewer-C: Claude DevX review every cycle
+### Director self-review (DevX diff read) every cycle
 
-Be a real reviewer C, not a rubber-stamp. Read the actual diff for this head (`gh pr diff <PR>`), read DevX via its `README.md` at `~/dev/projects/devx-coding-standards/`, and check each item against the changed lines. Report a table: one row per item, verdict + a short clause citing the line/symbol that justifies it. Cover (a) **readability/reviewability/overall-clean** - are names intent-revealing, control flow flat, no magic code a newcomer can't follow; is the change set small, focused, no unrelated refactors or speculative branches (YAGNI); DRY/single-source-of-truth, structural-not-patch, right concept, graceful degradation, observability in its own module. No evidence = not done. File real findings as P1/P2/P3 above the table. Apply DevX to code this PR touches - when DevX calls for a fix on code the PR modified, it's in scope this cycle, not deferred. Feed your findings to the implementer with the same unbiased framing as the other reviewers ("this is what the other ai said, what do you think") - never "the reviewer is right." The authority is `~/dev/projects/devx-coding-standards/`; this skill does NOT restate its rules.
+This is the **director reviewing its own orchestration's diff** - a real, adversarial DevX read, NOT an independent reviewer, and it must be labeled as such. Never present it as a third-party voice or as "another AI." Read the actual diff for this head (`gh pr diff <PR>`), read DevX via its `README.md` at `~/dev/projects/devx-coding-standards/`, and check each item against the changed lines. Report a table: one row per item, verdict + a short clause citing the line/symbol that justifies it. Cover (a) **readability/reviewability/overall-clean** - are names intent-revealing, control flow flat, no magic code a newcomer can't follow; is the change set small, focused, no unrelated refactors or speculative branches (YAGNI); DRY/single-source-of-truth, structural-not-patch, right concept, graceful degradation, observability in its own module. No evidence = not done. File real findings as P1/P2/P3 above the table, tagged `[DevX self-review]`. Apply DevX to code this PR touches - when DevX calls for a fix on code the PR modified, it's in scope this cycle, not deferred. Relay findings to the implementer honestly as your OWN self-review ("my own DevX read flagged X - what do you think?"), never as "the other AI said" and never as "the reviewer is right." The authority is `~/dev/projects/devx-coding-standards/`; this skill does NOT restate its rules.
 
 ### Discord webhook updates
 
