@@ -104,7 +104,28 @@ function resolveTranscriptPath(provider: string, repositoryInput: string, sessio
     return requireOne("Grok", matches, repository, sessionId);
   }
 
-  fail(`Unknown provider: ${provider} (use codex or grok)`, 2);
+  // Claude (Opus/Sonnet/etc.) Code project transcripts: one JSONL file per
+  // session under ~/.claude/projects/<cwd-with-slashes-as-dashes>/<session-id>.jsonl.
+  // Resolve by repository (+ optional session id); require exactly one match so a
+  // stale guess by modification time is never silently adopted.
+  if (provider === "claude") {
+    const root = process.env.CLAUDE_PROJECTS_DIR ?? path.join(homedir(), ".claude", "projects");
+    const encoded = repository.replace(/\//g, "-");
+    const projectDir = path.join(root, encoded);
+    if (!existsSync(projectDir)) {
+      fail(`No Claude project dir for ${repository} (expected ${projectDir}).`, 3);
+    }
+    const matches = readdirSync(projectDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".jsonl"))
+      .map((entry) => path.join(projectDir, entry.name))
+      .filter((file) => {
+        if (!sessionId) return true;
+        return path.basename(file).replace(/\.jsonl$/, "") === sessionId;
+      });
+    return requireOne("Claude", matches, repository, sessionId);
+  }
+
+  fail(`Unknown provider: ${provider} (use codex, grok, or claude)`, 2);
 }
 
 function resolveSession(provider: string, repositoryInput: string, sessionId?: string): void {
@@ -133,6 +154,7 @@ function assistantText(provider: string, row: unknown): string[] {
   const record = row as {
     type?: string;
     content?: unknown;
+    message?: { role?: string; content?: Array<{ type?: string; text?: string }> };
     payload?: { type?: string; role?: string; content?: Array<{ type?: string; text?: string }> };
   };
   if (provider === "codex") {
@@ -154,7 +176,20 @@ function assistantText(provider: string, row: unknown): string[] {
     }
     return [];
   }
-  if (provider !== "codex" && provider !== "grok") fail(`Unknown provider: ${provider} (use codex or grok)`, 2);
+  // Claude (Opus/Sonnet/etc.) project transcripts: one JSONL row per event.
+  // Assistant turns are `type === "assistant"` with `message.role === "assistant"`
+  // and `message.content` an array of typed blocks. Only `text` blocks carry the
+  // model's final emitted text; `tool_use`, `thinking`, and other blocks are
+  // excluded so only provider-emitted final text is returned (matching Codex/Grok).
+  if (provider === "claude" && record.type === "assistant" && record.message?.role === "assistant") {
+    if (!Array.isArray(record.message.content)) return [];
+    return record.message.content
+      .filter((item) => item.type === "text" && typeof item.text === "string")
+      .map((item) => item.text!);
+  }
+  if (provider !== "codex" && provider !== "grok" && provider !== "claude") {
+    fail(`Unknown provider: ${provider} (use codex, grok, or claude)`, 2);
+  }
   return [];
 }
 
@@ -255,7 +290,7 @@ async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
   switch (command) {
     case "path":
-      if (args.length < 2 || args.length > 3) fail("Usage: session-jsonl.ts path <codex|grok> <repository> [session-id]", 2);
+      if (args.length < 2 || args.length > 3) fail("Usage: session-jsonl.ts path <codex|grok|claude> <repository> [session-id]", 2);
       resolveSession(args[0]!, args[1]!, args[2]);
       break;
     case "seed":
@@ -263,11 +298,11 @@ async function main(): Promise<void> {
       seedSession(args[0]!, args[1]!);
       break;
     case "read":
-      if (args.length !== 3) fail("Usage: session-jsonl.ts read <codex|grok> <transcript.jsonl> <cursor-file>", 2);
+      if (args.length !== 3) fail("Usage: session-jsonl.ts read <codex|grok|claude> <transcript.jsonl> <cursor-file>", 2);
       readSession(args[0]!, args[1]!, args[2]!);
       break;
     case "wait": {
-      // session-jsonl.ts wait <codex|grok> <repository> [session-id] [--cursor <file>] [--max <s>] [--interval <s>]
+      // session-jsonl.ts wait <codex|grok|claude> <repository> [session-id] [--cursor <file>] [--max <s>] [--interval <s>]
       const positionals: string[] = [];
       let cursorFile = "";
       let maxSeconds = 300;
@@ -289,7 +324,7 @@ async function main(): Promise<void> {
       }
       if (positionals.length < 2 || positionals.length > 3) {
         fail(
-          "Usage: session-jsonl.ts wait <codex|grok> <repository> [session-id] [--cursor <file>] [--max <s>] [--interval <s>]",
+          "Usage: session-jsonl.ts wait <codex|grok|claude> <repository> [session-id] [--cursor <file>] [--max <s>] [--interval <s>]",
           2,
         );
       }

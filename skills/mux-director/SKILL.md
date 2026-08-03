@@ -208,7 +208,7 @@ Prefer the bounded browser idle waiter over repeated blind-sleep cycles - waking
 
 Mux deliberately does not provide a ChatGPT verdict-classifier, DOM content parser, request token, response digest, or result extractor. cmux and Rex are generic browser transports, while the agent interprets the current visible UI at each control boundary. The idle waiter only detects that the UI returned to ready-to-type; it does not decide a review is complete. Do not build shell polling loops that parse response text, run page JavaScript that classifies a verdict, or treat a missing progress control as a completed review. Never use `/new`, navigation, reload, or retry to recover an existing review; preserve the conversation and inspect it directly.
 
-The browser blind-sleep rule above is for ChatGPT/browser targets only. For a **local Codex or Grok target** (an implementor or reviewer whose transcript is a local JSONL), do not use a fixed blind sleep and do not dump full `read-screen` scrollback each cycle - that burns tokens on the same large screen repeatedly. Use the bounded session wait, which exits the moment the target goes idle:
+The browser blind-sleep rule above is for ChatGPT/browser targets only. For a **local Codex, Grok, or Claude target** (an implementor or reviewer whose transcript is a local JSONL), do not use a fixed blind sleep and do not dump full `read-screen` scrollback each cycle - that burns tokens on the same large screen repeatedly. Use the bounded session wait, which exits the moment the target goes idle:
 
 ```bash
 SKILL=${MUX_DIRECTOR_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-director}
