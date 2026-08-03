@@ -2,9 +2,10 @@
 
 ## Working principles (learned, apply across all projects)
 
-Detail files in `~/.claude/memory/`:
+Detail files in the agent's configured memory directory, when one exists:
 
-- **Write for the next reader — code must be clear, DRY, SRP, and long-term maintainable.** Clear over clever, one source of truth, one job per function; if a reader must decode a line, rewrite it. Never trade long-term clarity for cleverness or brevity. Full rule + reasoning: `~/dev/projects/devx-coding-standards/general-conventions.md` #1 RULE.
+- **Write for the next reader - code must be clear, DRY, SRP, and long-term maintainable.** Clear over clever, one source of truth, one job per function; if a reader must decode a line, rewrite it. Never trade long-term clarity for cleverness or brevity. Full rule + reasoning: the public DevX coding standards repository, `general-conventions.md`, #1 RULE.
+- **TESTS** Dont write small focused unit tests try to have our unit tests encapulsate as much logic as posisble otherwise we woudl end up with lot of small tests, delay writing them also when we already start seeing the feature works.  they should not overfit.
 - **Claude orchestrator + Codex genius** — Claude enforces scope/standards/sanity, Codex implements; steer one step at a time; consult/don't-prescribe; verify state before claiming "done."
 - **Prove the user-visible outcome before implementing** — never assume an API/intermediate number equals what the user sees; screenshot/check the UI first.
 - **When stuck or over-complex, rethink** — "outside the box" = a simpler overlooked solution, not an over-engineered one; favor the minimal fix.
@@ -15,10 +16,6 @@ Detail files in `~/.claude/memory/`:
 
 ## Use rtk to save tokens
 
-## AGY CLI
-
-Use the `agy-cli` skill when consulting an external CLI reviewer, designer, or second-opinion agent.
-
 ## GitHub
 
 Use the `gh` CLI for GitHub operations instead of GitHub skills, GitHub MCP
@@ -26,18 +23,28 @@ tools, or connector-based GitHub tools.
 
 ## Remote and Risky Commands
 
+Run routine local commands without asking for approval. This includes package-manager commands, tests, builds, type checks, linters, local code generation, temporary-file cleanup, `git add`, and `git commit`.
+
+For repository-wide TypeScript checks, use the repository's documented
+typecheck command or `tsc --noEmit`. Keep any diagnostic filtering explicit
+and local to the command being run; do not assume a machine-specific helper.
+
+Pushing commits to the branch associated with an existing draft PR is also allowed without asking for approval.
+
+Never push directly to `main`.
+
 Always ask for explicit user confirmation before any remote mutation or externally visible action. This includes `git push`, force-pushes, deleting remote branches, merging PRs, creating releases, deploys, cloud mutations, database writes, and destructive shell commands.
 
-For database inspection, use `psql-ro` (from `~/dev/projects/scripts`, on PATH) for read-only SQL. It sets `default_transaction_read_only=on` in PostgreSQL. Use plain `psql` only when a write is intentional and the user has approved it.
+Exception: the existing draft PR branch push described above does not require confirmation.
 
-## User Instructions
-
-These are common instructions for agents across all repos.
+For database inspection, use a repository-approved read-only SQL wrapper such
+as `psql-ro` when one is available on PATH. It should set
+`default_transaction_read_only=on` in PostgreSQL. Use plain `psql` only when a
+write is intentional and the user has approved it.
 
 ### General Guidelines
 
 * Never use the em dash "—". Use plain dash "-" instead.
-* When writing commit messages, never auto-add your acronym.
 * Never manually modify CHANGELOG.md files or any files managed automatically.
 * When writing or substantially editing long Markdown files, preserve layout structure. Preserve normal Markdown structure, but avoid wrapping lines arbitrarily.
 * When making technical decisions, do not give much weight to popular opinions. Instead, prefer quality, simplicity, robustness, scalability, and efficiency.
@@ -47,10 +54,11 @@ These are common instructions for agents across all repos.
 
 ### User Opinions
 
-When working on something that would benefit from context on the user's viewpoints, read `~/dev/projects/devx-coding-standards`.
+When working on something that would benefit from context on the user's viewpoints, read the public DevX coding standards repository.
 
 ### Voice Profile
 
-When talking or posting on behalf of the user using his identity, read `~/dev/projects/devx-coding-standards` first and match the user's preferences from that repository.
+When talking or posting on behalf of the user using their identity, follow the
+user's stated preferences and the public DevX coding standards repository.
 
-@/Users/tomerbd/.codex/RTK.md
+See the adjacent `RTK.md` file for optional command-proxy guidance.

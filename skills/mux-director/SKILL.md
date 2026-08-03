@@ -133,7 +133,7 @@ An agent blocked on a permission prompt is a real blocker; clearing routine gate
 
 ## Learn the human's steering and propagate it
 
-When the human prompts a monitored agent **directly** (as tomer), that text is unstructured steering - their taste, priorities, corrections for *this* task. It is signal. Extract the preference, persist it (dated, one bullet) to `/tmp/<task>-steering.md`, note it inline in that cycle's status report, re-read the file each cycle, and - if it's a clear durable taste - tell the active lead ("the human cares that X"). Extract the *actual* preference stated, not an extrapolation; when in doubt, surface to the human for confirmation rather than propagating a guess.
+When the human prompts a monitored agent **directly**, that text is unstructured steering - their taste, priorities, corrections for *this* task. It is signal. Extract the preference, persist it (dated, one bullet) to `/tmp/<task>-steering.md`, note it inline in that cycle's status report, re-read the file each cycle, and - if it's a clear durable taste - tell the active lead ("the human cares that X"). Extract the *actual* preference stated, not an extrapolation; when in doubt, surface to the human for confirmation rather than propagating a guess.
 
 ## Monitoring runs only while a session is alive
 

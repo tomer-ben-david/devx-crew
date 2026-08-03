@@ -73,6 +73,8 @@ Use `$mux-pr-description` when the PR title/body is missing, stale, or unclear. 
 
 ## Implementation loop
 
+The implementor is a capable peer, not a subordinate. Relay the **problem, the constraints, and the bar** (long-term fix, no second source of truth) — not the solution. State what must be true and why; let the implementor own the approach. Prescribing the patch caps the result at the orchestrator's idea and biases the review; a fresh peer solution is often better. This applies to findings relayed back too: describe the issue and the standard it violates, never the exact code to write.
+
 1. Prove the user-visible problem or desired outcome before implementation when possible.
 2. Give the implementor the goal, constraints, relevant area, and required verification. Leave the approach open.
 3. Prefer a structural root-cause fix over a second source of truth or layered guard.
@@ -124,7 +126,7 @@ Read [references/review-protocol.md](references/review-protocol.md) before start
 For every round:
 
 1. Record the exact head and selected scope.
-2. Start each new interactive reviewer fresh and verify reset succeeded. For an existing ChatGPT review, preserve and adopt its exact conversation and user-message identity; never use `/new` as recovery.
+2. Preserve each user-selected reviewer session across rereviews unless the user explicitly requests a fresh session. Do not send `/clear`, `/new`, or another reset command as a rereview prerequisite. For an existing ChatGPT review, preserve and adopt its exact conversation and user-message identity; never use `/new` as recovery.
 3. Invoke the reviewer's native review mechanism against the same scope.
 4. Poll each reviewer independently and read its full report.
 5. Relay every finding with its source and an orchestrator classification. Never silently filter a finding.
@@ -152,7 +154,24 @@ Resolve and retain the browser target's exact ref and stable UUID before every i
 
 Use `node scripts/review-wait-reminder.ts <stable-surface-or-pane-UUID> 300` for each delay. It only sleeps, prints the stable target identity back to the agent, and exits `0`; it never inspects or classifies the browser. After it exits, the agent re-resolves the UUID to its current ref, reverifies the workspace, pane, URL, and conversation, and performs the browser read.
 
-Mux deliberately does not provide a ChatGPT waiter, DOM parser, request token, response digest, or result extractor. cmux and Rex are generic browser transports, while the agent interprets the current visible UI at each control boundary. A background sleep is only a delay between inspections, never evidence that a result is ready. Do not build shell polling loops, run page JavaScript, or treat a missing progress control as a completed review. Never use `/new`, navigation, reload, or retry to recover an existing review; preserve the conversation and inspect it directly.
+Prefer the bounded browser idle waiter over repeated blind-sleep cycles - waking every interval to narrate "still waiting" burns reasoning tokens for no action. `node scripts/browser-wait-idle.ts surface:N --floor 150 --max 600` sleeps a floor (browsers need time), then blocks on the ChatGPT send control reappearing - a transport idle signal, not a verdict classification. It exits `0` when idle, non-zero `still generating` on timeout. After it exits `0`, perform the single content read and your own completion judgment. Run it as a tracked foreground task, never fire-and-forget with a shell `&`.
+
+Mux deliberately does not provide a ChatGPT verdict-classifier, DOM content parser, request token, response digest, or result extractor. cmux and Rex are generic browser transports, while the agent interprets the current visible UI at each control boundary. The idle waiter only detects that the UI returned to ready-to-type; it does not decide a review is complete. Do not build shell polling loops that parse response text, run page JavaScript that classifies a verdict, or treat a missing progress control as a completed review. Never use `/new`, navigation, reload, or retry to recover an existing review; preserve the conversation and inspect it directly.
+
+The browser blind-sleep rule above is for ChatGPT/browser targets only. For a **local Codex or Grok target** (an implementor or reviewer whose transcript is a local JSONL), do not use a fixed blind sleep and do not dump full `read-screen` scrollback each cycle - that burns tokens on the same large screen repeatedly. Use the bounded session wait, which exits the moment the target goes idle:
+
+```bash
+SKILL=${MUX_ORCHESTRATE_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-orchestrate}
+$SKILL/scripts/session-jsonl.ts wait codex "$PWD" <session-id> --cursor /tmp/mux-wait.cursor --max 600 --interval 15
+```
+
+After it exits `0`, read only the appended assistant messages with the same cursor (not the full screen):
+
+```bash
+$SKILL/scripts/session-jsonl.ts read codex "$(<transcript-path-from-wait>)" /tmp/mux-wait.cursor
+```
+
+Seed the cursor (`session-jsonl.ts seed <transcript> <cursor>`) at the current tail before handing work to the target so `wait`/`read` only observe new content. This replaces `sleep N && cmux read-screen --lines <large>` loops for local targets. The browser exception still governs ChatGPT targets - never run `wait` against a browser surface.
 
 ## Reporting
 
