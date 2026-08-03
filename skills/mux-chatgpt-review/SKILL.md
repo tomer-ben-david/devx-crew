@@ -5,12 +5,12 @@ description: Loop a pull request through a user-selected ChatGPT browser surface
 
 # Mux ChatGPT Review
 
-Run one neutral pull request review loop through the ChatGPT browser surface selected by the user. Preserve one chat while findings are being fixed, then require a clean result from a fresh chat on the unchanged head. Reuse `$mux-orchestrate` for scope, repair-family, guidance-refresh, and structural-reset rules.
+Run one neutral pull request review loop through the ChatGPT browser surface selected by the user. Preserve one chat while findings are being fixed, then require a clean result from a fresh chat on the unchanged head. Reuse `$mux-director` for scope, repair-family, guidance-refresh, and structural-reset rules.
 
 Resolve the shared implementation once before any command example:
 
 ```bash
-SKILL=${CODEX_HOME:-$HOME/.codex}/skills/mux-orchestrate
+SKILL=${CODEX_HOME:-$HOME/.codex}/skills/mux-director
 ```
 
 ## Resolve the run
@@ -50,7 +50,7 @@ Review @GitHub <owner>/<repository> PR #<number>.
 
 Immediately before submission, read and retain the immutable full PR head from GitHub. Record a local review label such as `github:<owner>/<repository>:pr:<number>:head:<full-sha>:<YYYYMMDDTHHMMSS+offset>` in the live report, but do not include transport metadata in the reviewer-visible prompt or browser state.
 
-Use the shared browser transport from `mux-orchestrate`:
+Use the shared browser transport from `mux-director`:
 
 ```bash
 "$SKILL/scripts/cmux-review-send.sh" browser surface:N /tmp/review-prompt.txt

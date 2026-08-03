@@ -28,8 +28,8 @@ function isUuid(value: string | undefined): value is string {
 
 function muxSkillDirectory(): string {
   return (
-    process.env.MUX_ORCHESTRATE_SKILL_DIR ??
-    path.join(process.env.CODEX_HOME ?? path.join(homedir(), ".codex"), "skills", "mux-orchestrate")
+    process.env.MUX_DIRECTOR_SKILL_DIR ??
+    path.join(process.env.CODEX_HOME ?? path.join(homedir(), ".codex"), "skills", "mux-director")
   );
 }
 
@@ -113,7 +113,7 @@ function send(args: string[]): void {
   if (target === undefined) fail("Resolved review target disappeared after validation");
 
   const muxSkill = muxSkillDirectory();
-  if (!existsSync(path.join(muxSkill, "SKILL.md"))) fail(`Mux Orchestrate skill not found: ${muxSkill}`);
+  if (!existsSync(path.join(muxSkill, "SKILL.md"))) fail(`Mux Director skill not found: ${muxSkill}`);
 
   if (target.startsWith("pane:")) {
     runTransport(path.join(muxSkill, "scripts", "rex-review-send.sh"), [target, promptFile]);

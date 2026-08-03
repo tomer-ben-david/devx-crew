@@ -6,7 +6,7 @@
 // TRANSPORT IDLE signal (the UI is ready to type again), not a judgment about
 // response content. It does not parse the answer, classify a verdict, or run
 // page JavaScript that decides whether the review is complete - so it stays
-// within the mux-orchestrate invariant that no script may declare a ChatGPT
+// within the mux-director invariant that no script may declare a ChatGPT
 // review "done". The orchestrator still performs the single content read and
 // its own completion judgment after this returns.
 //

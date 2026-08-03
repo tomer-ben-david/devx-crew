@@ -71,7 +71,7 @@ DevX Mux is also the canonical public home for reusable agent workflows:
 
 | Skill | Responsibility |
 | --- | --- |
-| `mux-orchestrate` | Coordinate implementors and reviewers, detect patch loops, and refresh guidance across cmux or DevX Rex |
+| `mux-director` | Orchestrate one PR's implementor and reviewers (fix loop, patch-loop detection, guidance refresh) OR oversee multiple parallel PRs with cross-PR smell detection, across cmux or DevX Rex |
 | `mux-chatgpt-review` | Loop a pull request through a user-selected ChatGPT browser surface until the exact head is clean |
 | `mux-multireview` | Run the same read-only scope concurrently through independent Codex and Grok reviewers |
 | `mux-pr-description` | Draft reviewer-neutral PR titles and descriptions with explicit Goals, Non-goals, and Solution |
@@ -85,7 +85,7 @@ mux setup
 
 Each person runs the installer once after installing the npm package. It links the packaged public skills into their Codex, Claude, and shared-agent skill directories, so every public workflow is available under a `mux-*` invocation name. Source contributors can use `./mux.sh link-agent-files` to link the same skills directly to their checkout.
 
-DevX Mux reserves the canonical names in the table plus the obsolete `devx-mux`, `pr-title-description`, and `staged-pr-review` names in the skill directories it manages. The installer deduplicates identical configured skill roots, rejects nested roots, builds and validates the complete canonical-link and obsolete-name cleanup plan, then applies it. Every canonical reserved name is force-replaced with the current source, and every obsolete reserved name is deleted. This makes setup deterministic after reinstalling or moving the package without risking its source checkout or preserving an older installed copy. The canonical orchestration workflow and shared browser transport live in `mux-orchestrate`.
+DevX Mux reserves the canonical names in the table plus the obsolete `devx-mux`, `mux-orchestrate`, `pr-title-description`, and `staged-pr-review` names in the skill directories it manages. The installer deduplicates identical configured skill roots, rejects nested roots, builds and validates the complete canonical-link and obsolete-name cleanup plan, then applies it. Every canonical reserved name is force-replaced with the current source, and every obsolete reserved name is deleted. This makes setup deterministic after reinstalling or moving the package without risking its source checkout or preserving an older installed copy. The canonical orchestration workflow and shared browser transport live in `mux-director` (which absorbed the former `mux-orchestrate`).
 
 The repository's root `AGENTS.md` remains local to each clone and is not installed globally. Reusable workflows belong in public skills; repository-specific policy stays in `AGENTS.md`.
 

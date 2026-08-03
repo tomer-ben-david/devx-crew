@@ -4,14 +4,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PUBLIC_SKILL_NAMES = [
-  "mux-orchestrate",
   "mux-chatgpt-review",
+  "mux-director",
   "mux-multireview",
   "mux-pr-description",
   "mux-staged-review",
 ] as const;
 
-const LEGACY_PUBLIC_SKILL_NAMES = ["devx-mux", "pr-title-description", "staged-pr-review"] as const;
+const LEGACY_PUBLIC_SKILL_NAMES = ["devx-mux", "mux-orchestrate", "pr-title-description", "staged-pr-review"] as const;
 
 /**
  * Global agent instruction files live in `agent-config/` and are symlinked into
@@ -58,7 +58,7 @@ function resolveSkillsSourceRoot(): string {
     path.resolve(moduleDirectory, "..", "skills"),
     path.resolve(moduleDirectory, "..", "..", "..", "skills"),
   ];
-  const sourceRoot = candidates.find((candidate) => existsSync(path.join(candidate, "mux-orchestrate", "SKILL.md")));
+  const sourceRoot = candidates.find((candidate) => existsSync(path.join(candidate, "mux-director", "SKILL.md")));
   if (sourceRoot === undefined) {
     throw new Error("Packaged DevX Mux skills are missing. Reinstall devx-mux and run mux setup again.");
   }

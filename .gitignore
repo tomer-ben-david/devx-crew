@@ -20,3 +20,5 @@ apps/cli/LICENSE
 # Local editor and operating-system state
 .idea/
 .DS_Store
+.claude/
+cmux-assets/

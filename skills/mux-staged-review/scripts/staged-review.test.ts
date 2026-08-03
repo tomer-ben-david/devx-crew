@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(scriptDirectory, "staged-review.ts");
-const muxSkill = path.resolve(scriptDirectory, "..", "..", "mux-orchestrate");
+const muxSkill = path.resolve(scriptDirectory, "..", "..", "mux-director");
 const gates = path.resolve(scriptDirectory, "..", "references", "orchestrator-gates.md");
 
 test("renders every stage without unresolved template values", () => {
@@ -18,7 +18,7 @@ test("renders every stage without unresolved template values", () => {
     execFileSync(process.execPath, [script, "send", stage, promptFile], {
       env: {
         ...process.env,
-        MUX_ORCHESTRATE_SKILL_DIR: muxSkill,
+        MUX_DIRECTOR_SKILL_DIR: muxSkill,
         STAGED_REVIEW_DRY_RUN: "1",
         STAGED_PR_URL: "https://github.com/example/project/pull/42",
         STAGED_COMPARE_URL: "https://github.com/example/project/compare/base...feature",
@@ -42,7 +42,7 @@ test("preserves template-like text inside replacement values", () => {
   execFileSync(process.execPath, [script, "send", "1", promptFile], {
     env: {
       ...process.env,
-      MUX_ORCHESTRATE_SKILL_DIR: muxSkill,
+      MUX_DIRECTOR_SKILL_DIR: muxSkill,
       STAGED_REVIEW_DRY_RUN: "1",
       STAGED_PR_URL: "https://github.com/example/project/pull/42",
       STAGED_COMPARE_URL: "https://github.com/example/project/compare/base...feature",
@@ -63,7 +63,7 @@ test("keeps request labels local and renders dry runs without an installed trans
     const result = execFileSync(process.execPath, [script, "send", "1", promptFile], {
       env: {
         ...process.env,
-        MUX_ORCHESTRATE_SKILL_DIR: path.join(root, "missing-mux-orchestrate"),
+        MUX_DIRECTOR_SKILL_DIR: path.join(root, "missing-mux-director"),
         STAGED_REVIEW_DRY_RUN: "1",
         STAGED_PR_URL: "https://github.com/example/project/pull/42",
         STAGED_COMPARE_URL: "https://github.com/example/project/compare/base...feature",
@@ -85,7 +85,7 @@ test("keeps request labels local and renders dry runs without an installed trans
 test("routes a resolved Rex pane and reports its stable identity", () => {
   const root = mkdtempSync(path.join(tmpdir(), "mux-staged-rex-target-"));
   try {
-    const fakeMuxSkill = path.join(root, "mux-orchestrate");
+    const fakeMuxSkill = path.join(root, "mux-director");
     const scripts = path.join(fakeMuxSkill, "scripts");
     mkdirSync(scripts, { recursive: true });
     writeFileSync(path.join(fakeMuxSkill, "SKILL.md"), "# test skill\n");
@@ -100,7 +100,7 @@ test("routes a resolved Rex pane and reports its stable identity", () => {
       {
         env: {
           ...process.env,
-          MUX_ORCHESTRATE_SKILL_DIR: fakeMuxSkill,
+          MUX_DIRECTOR_SKILL_DIR: fakeMuxSkill,
           STAGED_PR_URL: "https://github.com/example/project/pull/42",
           STAGED_COMPARE_URL: "https://github.com/example/project/compare/base...feature",
           STAGED_REQUEST_ID: "stage-rex",

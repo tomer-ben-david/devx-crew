@@ -210,7 +210,7 @@ const sleep = (seconds: number): Promise<void> =>
 // honest "incomplete" message; never claims completion without evidence.
 //
 // Local Codex/Grok sessions only. ChatGPT browser targets have no local JSONL
-// and their DOM must not be auto-classified as complete; see the mux-orchestrate
+// and their DOM must not be auto-classified as complete; see the mux-director
 // skill (no ChatGPT waiter by design).
 async function waitSession(
   provider: string,
@@ -294,7 +294,7 @@ async function main(): Promise<void> {
         );
       }
       const [provider, repository, sessionId] = positionals;
-      if (!cursorFile) cursorFile = path.join(process.env.HOME ?? homedir(), ".cache", "mux-orchestrate", `wait-${provider}.cursor`);
+      if (!cursorFile) cursorFile = path.join(process.env.HOME ?? homedir(), ".cache", "mux-director", `wait-${provider}.cursor`);
       await waitSession(provider!, repository!, sessionId, cursorFile, maxSeconds, intervalSeconds);
       break;
     }

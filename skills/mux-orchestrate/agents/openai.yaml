@@ -1,4 +1,0 @@
-interface:
-  display_name: "Mux Orchestrate"
-  short_description: "Orchestrate structural implementation and review"
-  default_prompt: "Use $mux-orchestrate to coordinate structural implementation and independent reviewers across cmux or DevX Rex."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mux Director"
+  short_description: "Orchestrate one PR's implementation and review, or oversee multiple parallel PRs"
+  default_prompt: "Use $mux-director to coordinate structural implementation and independent reviewers for a single PR, or to oversee multiple parallel PRs with cross-PR smell detection, across cmux or DevX Rex."

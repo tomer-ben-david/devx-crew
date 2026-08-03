@@ -19,7 +19,7 @@ If more than one session still qualifies, report the ambiguity instead of guessi
 Use the shared resolver when the provider and repository are known:
 
 ```bash
-SKILL=${MUX_ORCHESTRATE_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-orchestrate}
+SKILL=${MUX_DIRECTOR_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-director}
 session="$($SKILL/scripts/session-jsonl-path.sh codex "$PWD" <session-id>)"
 $SKILL/scripts/session-jsonl-read.sh --seed "$session" /tmp/mux-review.cursor
 # Send the review prompt after seeding.
@@ -71,7 +71,7 @@ A report is complete only when the provider emitted its final assistant response
 For a local Codex or Grok target, prefer the `wait` subcommand over a fixed blind sleep. It resolves the session, reads only appended rows via the seeded cursor, and exits `0` (printing the final assistant message) as soon as a final message has appeared **and** the transcript stops growing for one interval - i.e. the target went idle. It exits non-zero with an honest `incomplete` message on timeout, so a missing result is never misread as completion.
 
 ```bash
-SKILL=${MUX_ORCHESTRATE_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-orchestrate}
+SKILL=${MUX_DIRECTOR_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-director}
 # seed the cursor at the current tail before handing work to the target, then wait:
 $SKILL/scripts/session-jsonl.ts wait codex "$PWD" <session-id> \
   --cursor /tmp/mux-wait.cursor --max 600 --interval 15 && echo "target idle"
@@ -90,7 +90,7 @@ ChatGPT browser panes do not use the local Codex or Grok JSONL stores. After a l
 Do not wake every interval to narrate "still waiting" - that burns tokens on reasoning turns that produce no action. Use the bounded browser idle waiter once, which sleeps a floor (browsers/ChatGPT need time before checking is worthwhile), then blocks on the ChatGPT **send control reappearing** - a transport idle signal (the UI is ready to type again = done generating), not response-content parsing. It exits `0` when idle or non-zero with an honest `still generating` message on timeout:
 
 ```bash
-SKILL=${MUX_ORCHESTRATE_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-orchestrate}
+SKILL=${MUX_DIRECTOR_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-director}
 $SKILL/scripts/browser-wait-idle.ts surface:N --floor 150 --max 600 && echo "ChatGPT idle"
 ```
 

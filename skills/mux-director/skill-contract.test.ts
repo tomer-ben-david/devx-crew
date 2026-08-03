@@ -3,21 +3,25 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const skill = readFileSync(new URL("./SKILL.md", import.meta.url), "utf8");
+const reviewProtocol = readFileSync(new URL("./references/review-protocol.md", import.meta.url), "utf8");
 
-test("mux-director is a cross-PR overseer, not a single-PR orchestrator", () => {
-  // Identity: one director over many orchestrators, distinct from mux-orchestrate.
-  assert.match(skill, /One director oversees many `mux-orchestrate` runs/);
-  assert.match(skill, /Distinct from mux-orchestrate/);
-  assert.match(skill, /Do not use for a single PR/);
+test("mux-director is one skill with two scopes (single-PR orchestrator + multi-PR director)", () => {
+  // Identity: one skill that IS the orchestrator at single-PR scope and the
+  // cross-PR director at multi-PR scope (mux-orchestrate folded in).
+  assert.match(skill, /mux-director is one skill with two scopes/);
+  assert.match(skill, /At the \*\*single-PR\*\* scope it IS the orchestrator/);
+  assert.match(skill, /At the \*\*multi-PR\*\* scope it is the cross-PR director/);
   // Default stance is lightweight, escalating only on smell.
   assert.match(skill, /Default stance: lightweight overseer/);
   assert.match(skill, /Escalate to \*\*hands-on challenger\*\* only when a smell signal fires/);
 });
 
-test("mux-director does not own product code or verdicts", () => {
-  assert.match(skill, /does not write product code/);
-  assert.match(skill, /does not own any single PR/);
-  assert.match(skill, /it does not write the verdict/);
+test("mux-director's multi-PR mode does not write the verdict on any one PR", () => {
+  // The single-PR scope now owns the PR's fix loop, so the old "does not own
+  // any single PR" claim is gone. The narrower true claim: in cross-PR director
+  // mode it does not write the verdict - that PR's own orchestrator role does.
+  assert.match(skill, /when directing many PRs it does not write the verdict on any one PR/);
+  assert.match(skill, /that PR's own orchestrator role \(same skill\) does/);
   assert.match(skill, /Auto-approving, merging, deploying, or any remote mutation without explicit human confirmation/);
 });
 
@@ -175,4 +179,54 @@ test("mux-director measures review convergence and detects loops, telling the or
   // Loop-breaker action: tell the orchestrator with evidence + split-vs-keep.
   assert.match(skill, /tell the orchestrator with evidence/);
   assert.match(skill, /split .* its own follow-up PR/);
+});
+
+// --- Ported from mux-orchestrate's contract test (folded into this skill) ---
+
+test("the live checkpoint preserves every open repair family across context loss", () => {
+  assert.match(skill, /Maintain one repair-family ledger for the current goal/);
+  assert.match(skill, /Keep every unrelated open family in the ledger at the same time/);
+  assert.match(skill, /reconstructing every open repair family, closed-family tombstone, and attempt history/);
+  assert.match(skill, /mark the affected state unknown, do not reset it to zero/);
+  assert.match(skill, /Open repair families:\n- id=<stable family identity>; attempts=<count or unknown>/);
+  assert.match(skill, /compact tombstone that retains its stable identity, attempt count, closure head and evidence/);
+  assert.match(skill, /Closed repair families:\n- id=<stable family identity>; attempts=<count or unknown>/);
+  assert.match(skill, /Assign the scope contract one stable goal ID/);
+  assert.match(skill, /Required outcome: the concrete state that must be true before the goal can close/);
+  assert.match(skill, /Acceptance evidence: the observations, checks, or artifacts that prove the required outcome/);
+  assert.match(skill, /Scope contract: goal=<intent>; non-goals=<boundaries>; review=<scope>; mutation=<authority>; required=<outcome>; acceptance=<evidence>/);
+  assert.match(skill, /Reconcile ledger state only when its bound goal ID and snapshot match/);
+  assert.doesNotMatch(skill, /^Repair family:/m);
+  assert.doesNotMatch(skill, /^Repair attempts:/m);
+});
+
+test("the shared protocol preserves ChatGPT working-chat continuity", () => {
+  assert.match(reviewProtocol, /Session freshness is not required for an independent review/);
+  assert.match(reviewProtocol, /has its own explicit independent-confirmation workflow/);
+  assert.match(reviewProtocol, /Updated\. Re-review everything\./);
+  assert.match(reviewProtocol, /provenance and exact-head gates still apply to every result/);
+});
+
+// --- Ported codex-review-cycle features (contractually pinned) ---
+
+test("mux-director ports the @codex bot slow second review channel", () => {
+  assert.match(skill, /gh pr comment <PR> --body "@codex review"/);
+  assert.match(skill, /chatgpt-codex-connector/);
+});
+
+test("mux-director ports P1-bounded convergence for large diffs", () => {
+  assert.match(skill, /ZERO P1\/bug findings on the same HEAD/);
+  assert.match(skill, /P2-and-below do NOT block stopping/);
+});
+
+test("mux-director ports the Discord webhook update mechanic", () => {
+  assert.match(skill, /~\/.claude\/.mux-director-webhook/);
+  assert.match(skill, /curl -s -X POST "\$WEBHOOK"/);
+  assert.match(skill, /HTTP 204 = success/);
+});
+
+test("mux-director ports Reviewer-C (Claude DevX review every cycle)", () => {
+  assert.match(skill, /gh pr diff <PR>/);
+  assert.match(skill, /~\/dev\/projects\/devx-coding-standards/);
+  assert.match(skill, /readability\/reviewability\/overall-clean/);
 });
