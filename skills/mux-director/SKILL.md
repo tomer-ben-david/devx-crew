@@ -1,6 +1,6 @@
 ---
 name: mux-director
-description: Orchestrate an implementor plus independent Codex/Grok/ChatGPT/@codex reviewers (fired in parallel, every push, no ranking) AND the director's own clearly-labeled DevX self-review for a single PR, OR oversee several parallel PRs with cross-PR smell-detection, one status view, and decision routing. Use when the user asks for mux-director, mux-orchestrate, a multi-review loop with an implementor, mux-aware panel discovery, repeated-patch or context-drift detection, codex-review or grok-review coordination, cross-PR oversight, scope-creep/over-engineering/whack-a-mole detection, independent reality checks against an agent's self-serving claims, reviewer-set parity, or older codex-orchestrate, cmux-review-loop, rex-review-loop, or staged review workflows. Use mux-multireview instead for read-only concurrent Codex and Grok review without implementation.
+description: Orchestrate an implementor plus independent Codex/Grok/ChatGPT/@codex reviewers (fired in parallel, every push, no ranking), the director's own clearly-labeled DevX self-review, AND an Opus investigator panel (when provided) for deep codebase investigation and fact-checking/DB cross-checking of agents' claims - independently verified before any scope or implementation change. Orchestrate a single PR, OR oversee several parallel PRs with cross-PR smell-detection, one status view, and decision routing. Use when the user asks for mux-director, mux-orchestrate, a multi-review loop with an implementor, mux-aware panel discovery, repeated-patch or context-drift detection, codex-review or grok-review coordination, cross-PR oversight, scope-creep/over-engineering/whack-a-mole detection, independent reality checks against an agent's self-serving claims, reviewer-set parity, or older codex-orchestrate, cmux-review-loop, rex-review-loop, or staged review workflows. Use mux-multireview instead for read-only concurrent Codex and Grok review without implementation.
 ---
 
 # Mux Director
@@ -47,8 +47,11 @@ Prefer these canonical names:
 | Implementor | `codex`, `codex-implementor` |
 | Codex reviewer | `codex-review`, `codex-reviewer` |
 | Grok reviewer | `grok-review`, `grok-reviewer` |
+| Opus investigator (if provided) | `opus`, `claude`, `claude-review` |
 | Standards reviewer | `codex devx-coding-standards` |
 | Browser reviewer | `chatgpt` |
+
+`opus` (a Claude/Opus panel) is not always present. When the human has provided one in cmux, use it as the dedicated **investigator / fact-checker** (see the Opus investigator section) - not as a general reviewer. Do not assume one exists; discover it from the live tree like any other target.
 
 Accept explicit pane/surface refs. Treat numeric IDs as ephemeral and re-resolve them from the live tree before a later round.
 
@@ -174,6 +177,16 @@ Two thorough reviewers on xhigh/high will essentially always find a suggestion-t
 
 This is the **director reviewing its own orchestration's diff** - a real, adversarial DevX read, NOT an independent reviewer, and it must be labeled as such. Never present it as a third-party voice or as "another AI." Read the actual diff for this head (`gh pr diff <PR>`), read DevX via its `README.md` at `~/dev/projects/devx-coding-standards/`, and check each item against the changed lines. Report a table: one row per item, verdict + a short clause citing the line/symbol that justifies it. Cover (a) **readability/reviewability/overall-clean** - are names intent-revealing, control flow flat, no magic code a newcomer can't follow; is the change set small, focused, no unrelated refactors or speculative branches (YAGNI); DRY/single-source-of-truth, structural-not-patch, right concept, graceful degradation, observability in its own module. No evidence = not done. File real findings as P1/P2/P3 above the table, tagged `[DevX self-review]`. Apply DevX to code this PR touches - when DevX calls for a fix on code the PR modified, it's in scope this cycle, not deferred. Relay findings to the implementer honestly as your OWN self-review ("my own DevX read flagged X - what do you think?"), never as "the other AI said" and never as "the reviewer is right." The authority is `~/dev/projects/devx-coding-standards/`; this skill does NOT restate its rules.
 
+### Opus investigator (independent fact-checker, when provided)
+
+When the human has provided an Opus/Claude panel in cmux, it is a distinct, independent surface from the director's own self-review above - use it as the **investigator, researcher, and fact-checker**, not as a general code reviewer. Its strengths are exactly where it should be spent: **deep codebase investigation, research across all available inputs (code, data, docs, the database), fact-checking other agents' claims, and cross-checking/validating against the real world - including reading from the database** to confirm what the code actually does or what state actually exists. Treat it as a strong researcher: give it an open question and let it dig through every relevant input and come back with a grounded picture, not a guess.
+
+Route these to it: a contested claim between agents, an implementor's self-serving defense ("reviewer error"), a "does this already exist / is this being re-invented" question, a "what's the true current behavior" question that requires tracing across modules or hitting the DB, a research task ("find everything that touches X", "gather all the inputs that decide Y"), and any smell signal that needs an independent reality check. Give it the specific question and the evidence to examine; let it research, trace code, and query state, and report back with cited line/symbol or query evidence.
+
+**Independently verify its evidence before changing scope or implementation.** Opus is strong at this work, but its findings are input, not verdict. A scope change (expanding or contracting goals/non-goals), a structural reset, or a change of implementation approach on its say-so alone is not allowed: re-check its claim against repository state or runtime evidence yourself (or via the implementor) before acting. Treat "Opus said X" exactly like any other reviewer claim - cite the evidence, not the source.
+
+If no Opus panel exists, do not assume one - skip this role; the director's own self-review and the other reviewers still cover the diff. Tag its findings `[opus investigator]`.
+
 ### Discord webhook updates
 
 Webhook URL stored in `~/.claude/.mux-director-webhook` (chmod 600) - never inline the secret.
@@ -232,7 +245,7 @@ Default cost is low: status reads, not deep dives. Trust each task's agent(s) to
 | Signal | Action |
 |--------|--------|
 | **3rd finding in one family** | Demand a bounded root-cause plan; is the feature itself structurally wrong? |
-| **Self-serving defense** | Agent dismisses a concern about its own work as "reviewer error" - read the code independently, verify or refute on evidence |
+| **Self-serving defense** | Agent dismisses a concern about its own work as "reviewer error" - read the code independently (route to the Opus investigator if one is provided), verify or refute on evidence |
 | **PR fixes a problem the PR created** | Can the failure mode be removed structurally instead of guarded? |
 | **Scope drift vs the stated goal** | Diff grown past the one-line intent - tell the **active lead** the specific drift with evidence AND surface to the human. (Scope is about the *feature/goal*, not line count.) |
 | **Narrow repeated guards / duplication** | Route to the structural-owner fix; stop the whack-a-mole |
