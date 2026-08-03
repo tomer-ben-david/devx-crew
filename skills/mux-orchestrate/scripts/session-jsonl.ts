@@ -66,7 +66,7 @@ function requireOne(label: string, matches: string[], repository: string, sessio
   );
 }
 
-function resolveSession(provider: string, repositoryInput: string, sessionId?: string): void {
+function resolveTranscriptPath(provider: string, repositoryInput: string, sessionId?: string): string {
   const repository = realpathSync(repositoryInput);
   if (provider === "codex") {
     const root = path.join(process.env.CODEX_HOME ?? path.join(homedir(), ".codex"), "sessions");
@@ -82,8 +82,7 @@ function resolveSession(provider: string, repositoryInput: string, sessionId?: s
         return false;
       }
     });
-    process.stdout.write(`${requireOne("Codex", matches, repository, sessionId)}\n`);
-    return;
+    return requireOne("Codex", matches, repository, sessionId);
   }
 
   if (provider === "grok") {
@@ -102,11 +101,14 @@ function resolveSession(provider: string, repositoryInput: string, sessionId?: s
     const matches = filesUnder(path.join(root, "sessions"), (file) =>
       file.endsWith(path.join(id, "chat_history.jsonl")),
     );
-    process.stdout.write(`${requireOne("Grok", matches, repository, sessionId)}\n`);
-    return;
+    return requireOne("Grok", matches, repository, sessionId);
   }
 
   fail(`Unknown provider: ${provider} (use codex or grok)`, 2);
+}
+
+function resolveSession(provider: string, repositoryInput: string, sessionId?: string): void {
+  process.stdout.write(`${resolveTranscriptPath(provider, repositoryInput, sessionId)}\n`);
 }
 
 function writeCursor(cursorFile: string, offset: number): void {
@@ -156,12 +158,16 @@ function assistantText(provider: string, row: unknown): string[] {
   return [];
 }
 
-function readSession(provider: string, transcript: string, cursorFile: string): void {
+// Reads appended, complete JSONL rows since the cursor and returns the assistant
+// output_text messages they contain. Advances the cursor past every complete line
+// so a later call only sees newly appended content. Reasoning/interim rows are
+// excluded by assistantText, so only provider-emitted final text is returned.
+function readAppendedAssistantTexts(provider: string, transcript: string, cursorFile: string): string[] {
   if (!existsSync(transcript)) fail(`Transcript not found: ${transcript}`);
   const size = statSync(transcript).size;
   let offset = readCursor(cursorFile);
   if (offset > size) offset = 0;
-  if (offset === size) return;
+  if (offset === size) return [];
 
   const descriptor = openSync(transcript, "r");
   let bytes: Buffer;
@@ -173,34 +179,128 @@ function readSession(provider: string, transcript: string, cursorFile: string): 
   }
 
   const lastNewline = bytes.lastIndexOf(0x0a);
-  if (lastNewline < 0) return;
+  if (lastNewline < 0) return [];
   const complete = bytes.subarray(0, lastNewline + 1).toString("utf8");
+  const texts: string[] = [];
   for (const line of complete.split("\n")) {
     if (!line.trim()) continue;
     try {
-      for (const text of assistantText(provider, JSON.parse(line))) process.stdout.write(`${text}\n`);
+      texts.push(...assistantText(provider, JSON.parse(line)));
     } catch {
       // Provider logs may contain an isolated malformed row. Preserve cursor progress
       // across complete lines and continue reading later valid messages.
     }
   }
   writeCursor(cursorFile, offset + lastNewline + 1);
+  return texts;
 }
 
-const [command, ...args] = process.argv.slice(2);
-switch (command) {
-  case "path":
-    if (args.length < 2 || args.length > 3) fail("Usage: session-jsonl.ts path <codex|grok> <repository> [session-id]", 2);
-    resolveSession(args[0]!, args[1]!, args[2]);
-    break;
-  case "seed":
-    if (args.length !== 2) fail("Usage: session-jsonl.ts seed <transcript.jsonl> <cursor-file>", 2);
-    seedSession(args[0]!, args[1]!);
-    break;
-  case "read":
-    if (args.length !== 3) fail("Usage: session-jsonl.ts read <codex|grok> <transcript.jsonl> <cursor-file>", 2);
-    readSession(args[0]!, args[1]!, args[2]!);
-    break;
-  default:
-    fail("Usage: session-jsonl.ts <path|seed|read> ...", 2);
+function readSession(provider: string, transcript: string, cursorFile: string): void {
+  for (const text of readAppendedAssistantTexts(provider, transcript, cursorFile)) {
+    process.stdout.write(`${text}\n`);
+  }
 }
+
+const sleep = (seconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, seconds * 1_000));
+
+// Polls a resolved provider transcript until a final assistant message appears
+// AND the file stops growing for one interval (quiescence = the agent went idle),
+// then exits 0 and prints the final message. Exits non-zero on timeout with an
+// honest "incomplete" message; never claims completion without evidence.
+//
+// Local Codex/Grok sessions only. ChatGPT browser targets have no local JSONL
+// and their DOM must not be auto-classified as complete; see the mux-orchestrate
+// skill (no ChatGPT waiter by design).
+async function waitSession(
+  provider: string,
+  repository: string,
+  sessionId: string | undefined,
+  cursorFile: string,
+  maxSeconds: number,
+  intervalSeconds: number,
+): Promise<void> {
+  const transcript = resolveTranscriptPath(provider, repository, sessionId);
+  const deadline = Date.now() + maxSeconds * 1_000;
+  // Accumulate every final assistant message seen since the wait started. The
+  // detection read advances the cursor, so we cannot re-read on completion;
+  // we print this accumulated buffer instead.
+  const finalTexts: string[] = [];
+  let sizeAtLastRead = statSync(transcript).size;
+  for (;;) {
+    const texts = readAppendedAssistantTexts(provider, transcript, cursorFile);
+    if (texts.length > 0) finalTexts.push(...texts);
+    if (finalTexts.length > 0) {
+      // A final message has appeared. Wait one interval and check whether the
+      // transcript kept growing; if it stopped, the agent went idle.
+      await sleep(intervalSeconds);
+      if (Date.now() >= deadline) break;
+      const sizeAfter = existsSync(transcript) ? statSync(transcript).size : sizeAtLastRead;
+      if (sizeAfter === sizeAtLastRead) {
+        for (const text of finalTexts) process.stdout.write(`${text}\n`);
+        process.exitCode = 0;
+        return;
+      }
+      sizeAtLastRead = sizeAfter;
+    } else {
+      sizeAtLastRead = existsSync(transcript) ? statSync(transcript).size : sizeAtLastRead;
+      if (Date.now() >= deadline) break;
+      await sleep(intervalSeconds);
+    }
+  }
+  fail(`incomplete: no idle final assistant message after ${maxSeconds}s on ${provider} session`, 1);
+}
+
+async function main(): Promise<void> {
+  const [command, ...args] = process.argv.slice(2);
+  switch (command) {
+    case "path":
+      if (args.length < 2 || args.length > 3) fail("Usage: session-jsonl.ts path <codex|grok> <repository> [session-id]", 2);
+      resolveSession(args[0]!, args[1]!, args[2]);
+      break;
+    case "seed":
+      if (args.length !== 2) fail("Usage: session-jsonl.ts seed <transcript.jsonl> <cursor-file>", 2);
+      seedSession(args[0]!, args[1]!);
+      break;
+    case "read":
+      if (args.length !== 3) fail("Usage: session-jsonl.ts read <codex|grok> <transcript.jsonl> <cursor-file>", 2);
+      readSession(args[0]!, args[1]!, args[2]!);
+      break;
+    case "wait": {
+      // session-jsonl.ts wait <codex|grok> <repository> [session-id] [--cursor <file>] [--max <s>] [--interval <s>]
+      const positionals: string[] = [];
+      let cursorFile = "";
+      let maxSeconds = 300;
+      let intervalSeconds = 15;
+      for (let i = 0; i < args.length; i += 1) {
+        const arg = args[i]!;
+        if (arg === "--cursor" || arg === "--max" || arg === "--interval") {
+          const value = args[i + 1];
+          if (value === undefined) fail(`Usage: session-jsonl.ts wait ... ${arg} <value>`, 2);
+          i += 1;
+          if (arg === "--cursor") cursorFile = value;
+          else {
+            const n = Number(value);
+            if (!Number.isInteger(n) || n < 0) fail(`${arg} must be a non-negative integer: ${value}`, 2);
+            if (arg === "--max") maxSeconds = n;
+            else intervalSeconds = n;
+          }
+        } else positionals.push(arg);
+      }
+      if (positionals.length < 2 || positionals.length > 3) {
+        fail(
+          "Usage: session-jsonl.ts wait <codex|grok> <repository> [session-id] [--cursor <file>] [--max <s>] [--interval <s>]",
+          2,
+        );
+      }
+      const [provider, repository, sessionId] = positionals;
+      if (!cursorFile) cursorFile = path.join(process.env.HOME ?? homedir(), ".cache", "mux-orchestrate", `wait-${provider}.cursor`);
+      await waitSession(provider!, repository!, sessionId, cursorFile, maxSeconds, intervalSeconds);
+      break;
+    }
+    default:
+      fail("Usage: session-jsonl.ts <path|seed|read|wait> ...", 2);
+  }
+}
+
+await main();

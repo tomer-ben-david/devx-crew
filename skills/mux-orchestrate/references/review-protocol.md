@@ -18,9 +18,9 @@ Before every PR review round, each reviewer independently reads the live title, 
 
 ## Independence
 
-Independent review rounds start in a fresh reviewer session. Give those reviewers the goal, non-goals, exact scope, and current head. Do not enumerate earlier findings or fixes in a fresh-round prompt. That biases the reviewer toward confirming the prior result.
+Session freshness is not required for an independent review. Preserve each user-selected reviewer session across rereviews unless the user explicitly requests a fresh session; do not send `/clear`, `/new`, or another reset command as a rereview prerequisite. Give reviewers the goal, non-goals, exact scope, and current head. Keep rereview prompts neutral and do not enumerate earlier findings or fixes, which biases the reviewer toward confirming the prior result.
 
-`mux-chatgpt-review` owns one explicit persistent-conversation exception. Its first working-chat and independent-confirmation prompts contain only the repository and PR number. Fix rereviews retain the working conversation and use only `Updated. Re-review everything.` Freshness applies when that workflow starts its independent clean-confirmation conversation, not between repair rounds in the working conversation. The focused skill's provenance and exact-head gates still apply to every result.
+`mux-chatgpt-review` has its own explicit independent-confirmation workflow. Its first working-chat and independent-confirmation prompts contain only the repository and PR number. Fix rereviews retain the working conversation and use only `Updated. Re-review everything.` The focused skill's provenance and exact-head gates still apply to every result.
 
 Use the reviewer's native review command when available. Preserve provider output verbatim. Do not reject, repair, or reshape a completed report because its Markdown differs from an expected schema.
 

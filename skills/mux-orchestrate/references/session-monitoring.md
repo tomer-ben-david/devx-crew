@@ -66,9 +66,35 @@ Read the complete assistant report, not only its last verdict line.
 
 A report is complete only when the provider emitted its final assistant response and the target returned to an idle/ready state. If the session stopped mid-turn or the mux target was interrupted, record the review as incomplete and rerun it.
 
+### Bounded wait for a local session
+
+For a local Codex or Grok target, prefer the `wait` subcommand over a fixed blind sleep. It resolves the session, reads only appended rows via the seeded cursor, and exits `0` (printing the final assistant message) as soon as a final message has appeared **and** the transcript stops growing for one interval - i.e. the target went idle. It exits non-zero with an honest `incomplete` message on timeout, so a missing result is never misread as completion.
+
+```bash
+SKILL=${MUX_ORCHESTRATE_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-orchestrate}
+# seed the cursor at the current tail before handing work to the target, then wait:
+$SKILL/scripts/session-jsonl.ts wait codex "$PWD" <session-id> \
+  --cursor /tmp/mux-wait.cursor --max 600 --interval 15 && echo "target idle"
+```
+
+The quiescence check is the JSONL's best proxy for "final message + target idle". It cannot prove the target is truly idle if it emits final text and then keeps doing tool-only work that writes no assistant rows; bounded by `--interval`, that is at most one poll late, never a correctness error.
+
+`--max` is the only timeout bound - do not wrap `wait` in `timeout(1)`, which macOS does not ship. `wait` self-terminates at `--max` (verified by test) and exits non-zero with `incomplete`, so it never hangs. Pass a `--cursor` file so repeated waits only observe new content.
+
 ## Browser exception
 
 ChatGPT browser panes do not use the local Codex or Grok JSONL stores. After a long background wait, inspect the same browser surface directly and interpret its latest visible response. Do not delegate result selection or completion judgment to a parser or waiter script.
+
+### Bounded wait for a ChatGPT browser target
+
+Do not wake every interval to narrate "still waiting" - that burns tokens on reasoning turns that produce no action. Use the bounded browser idle waiter once, which sleeps a floor (browsers/ChatGPT need time before checking is worthwhile), then blocks on the ChatGPT **send control reappearing** - a transport idle signal (the UI is ready to type again = done generating), not response-content parsing. It exits `0` when idle or non-zero with an honest `still generating` message on timeout:
+
+```bash
+SKILL=${MUX_ORCHESTRATE_SKILL_DIR:-${CODEX_HOME:-$HOME/.codex}/skills/mux-orchestrate}
+$SKILL/scripts/browser-wait-idle.ts surface:N --floor 150 --max 600 && echo "ChatGPT idle"
+```
+
+Run it as a tracked FOREGROUND task, never fire-and-forget with a shell `&`. After it exits `0`, perform the single content read and your own completion judgment (the waiter does not classify the verdict). The invariant is unchanged: no script decides a ChatGPT review is complete - this only signals the UI returned to idle.
 
 ## Mux fallback
 

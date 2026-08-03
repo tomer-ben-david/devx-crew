@@ -23,8 +23,8 @@ test("the live checkpoint preserves every open repair family across context loss
 });
 
 test("the shared protocol preserves ChatGPT working-chat continuity", () => {
-  assert.match(reviewProtocol, /owns one explicit persistent-conversation exception/);
+  assert.match(reviewProtocol, /Session freshness is not required for an independent review/);
+  assert.match(reviewProtocol, /has its own explicit independent-confirmation workflow/);
   assert.match(reviewProtocol, /Updated\. Re-review everything\./);
-  assert.match(reviewProtocol, /Freshness applies when that workflow starts its independent clean-confirmation conversation/);
   assert.match(reviewProtocol, /provenance and exact-head gates still apply to every result/);
 });
