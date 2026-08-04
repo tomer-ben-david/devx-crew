@@ -98,8 +98,10 @@ Use `$mux-pr-description` when the PR title/body is missing, stale, or unclear. 
 
 The implementor is a capable peer, not a subordinate. Relay the **problem, the constraints, and the bar** (long-term fix, no second source of truth) — not the solution. State what must be true and why; let the implementor own the approach. Prescribing the patch caps the result at the orchestrator's idea and biases the review; a fresh peer solution is often better. This applies to findings relayed back too: describe the issue and the standard it violates, never the exact code to write.
 
+**Match the direction's specificity to the implementor and the task.** "Leave the approach open" is the default for a strong autonomous implementor, but it is NOT universal. Some implementors are excellent executors of a clear plan but poor at resolving vague/open-ended direction — e.g. **Luna is a strong implementor but not good at getting a vague thing to do; give it a detailed implementation plan.** When handing work to such an implementor, do not leave the approach open: provide a concrete plan — the goal, the affected files/functions, the intended approach, the steps in order, and the required verification. Tailor by implementor + task: vague/open-ended task or a plan-needing implementor → detailed plan; clear, well-scoped task to an autonomous implementor → problem + constraints, approach open. When unsure which an implementor needs, lean toward more specificity, not less.
+
 1. Prove the user-visible problem or desired outcome before implementation when possible.
-2. Give the implementor the goal, constraints, relevant area, and required verification. Leave the approach open.
+2. Give the implementor the goal, constraints, relevant area, and required verification. For a plan-needing implementor (e.g. Luna) or a vague task, also give the concrete plan and steps. Otherwise leave the approach open.
 3. Prefer a structural root-cause fix over a second source of truth or layered guard.
 4. Read the full implementor result and verify material claims against repository state or runtime evidence.
 5. Ask before any push, PR edit, bot trigger, thread resolution, deploy, or other remote mutation.
